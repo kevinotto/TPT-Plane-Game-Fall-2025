@@ -1,43 +1,48 @@
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 public class PlayerController : MonoBehaviour
 {
-    public float FlySpeed = 5;
-    public float YawAmount = 120;
+    public float FlySpeed = 20f;
+    public float YawAmount = 120f;
     private float Yaw;
+    private Rigidbody rb;
 
-    // Start is called before the first frame update
     void Start()
     {
-        
+        rb = GetComponent<Rigidbody>();
+        rb.freezeRotation = true; // Prevent physics from messing rotation
     }
 
-    // Update is called once per frame
-    void Update()
+    void FixedUpdate()
     {
-        //move forward
-        transform.position += transform.forward * FlySpeed * Time.deltaTime;
-
-        //inputs
+        // Get input
         float horizontalInput = Input.GetAxis("Horizontal");
         float verticalInput = Input.GetAxis("Vertical");
 
-        //yaw, pitch, roll
-        Yaw += horizontalInput * YawAmount * Time.deltaTime;
-        float pitch=Mathf.Lerp(0, 90, Mathf.Abs(verticalInput))*Mathf.Sign(verticalInput);
-        float roll=Mathf.Lerp(0, 20, Mathf.Abs(horizontalInput))*-Mathf.Sign(horizontalInput);
+        // Calculate direction and rotation
+        Yaw += horizontalInput * YawAmount * Time.fixedDeltaTime;
+        float pitch = Mathf.Lerp(0, 45, Mathf.Abs(verticalInput)) * Mathf.Sign(verticalInput);
+        float roll = Mathf.Lerp(0, 20, Mathf.Abs(horizontalInput)) * -Mathf.Sign(horizontalInput);
 
-        //apply rotation
-        transform.localRotation = Quaternion.Euler(Vector3.up * Yaw + Vector3.right * pitch + Vector3.forward * roll);
+        Quaternion targetRotation = Quaternion.Euler(Vector3.up * Yaw + Vector3.right * pitch + Vector3.forward * roll);
+
+        // Apply rotation
+        rb.MoveRotation(targetRotation);
+
+        // Move forward using physics
+        Vector3 move = transform.forward * FlySpeed * Time.fixedDeltaTime;
+        rb.MovePosition(rb.position + move);
     }
 
-    private void OnTriggerEnter(Collider other)
+    private void OnCollisionEnter(Collision collision)
     {
-        if (other.gameObject.tag == "danger")
+        Debug.Log("Collided with: " + collision.gameObject.name);
+
+        if (collision.gameObject.CompareTag("Terrain"))
         {
-            Application.LoadLevel(Application.loadedLevel);
+            Debug.Log("Crashed into terrain!");
+            SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
         }
     }
 }
